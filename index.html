@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mi amor</title>
+  <style>
+    :root {
+      --bg-warm-1: #e8d8c3;
+      --bg-warm-2: #cbb292;
+      --bg-warm-3: #9e8162;
+      --paper-shadow: 0 24px 60px rgba(45, 28, 14, 0.38), 0 6px 18px rgba(45, 28, 14, 0.22);
+      --card-aspect: 0.6667; /* 2:3 portrait per page */
+      --page-h: min(80vh, 750px);
+      --page-w: calc(var(--page-h) * var(--card-aspect));
+    }
+
+    @media (max-width: 920px) {
+      :root {
+        --page-w: min(44vw, 340px);
+        --page-h: calc(var(--page-w) / var(--card-aspect));
+      }
+    }
+
+    @media (max-width: 560px) {
+      :root {
+        --page-w: min(45.5vw, 225px);
+        --page-h: calc(var(--page-w) / var(--card-aspect));
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Georgia", "Times New Roman", serif;
+      background-color: var(--bg-warm-2);
+      color: #4a3525;
+    }
+
+    .desk-backdrop {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(255, 248, 235, 0.55) 0%, rgba(226, 204, 174, 0.35) 48%, rgba(138, 106, 76, 0.65) 100%),
+        repeating-linear-gradient(45deg, rgba(120, 88, 56, 0.025) 0px, rgba(120, 88, 56, 0.025) 2px, transparent 2px, transparent 6px),
+        linear-gradient(135deg, #eadbc8 0%, #d5be9f 50%, #bda07c 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      perspective: 2200px;
+      overflow: hidden;
+    }
+
+    .ambient-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Top utility & navigation bar */
+    .top-controls {
+      position: fixed;
+      top: 16px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 45;
+      pointer-events: none;
+    }
+
+    .left-controls, .right-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      pointer-events: auto;
+    }
+
+    .ui-btn {
+      appearance: none;
+      border: 1px solid rgba(92, 63, 39, 0.25);
+      background: rgba(250, 242, 230, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #543b28;
+      padding: 8px 15px;
+      border-radius: 999px;
+      font-family: "Georgia", serif;
+      font-size: 0.84rem;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(58, 36, 18, 0.12);
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .ui-btn:hover {
+      background: rgba(255, 249, 240, 0.98);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(58, 36, 18, 0.18);
+    }
+
+    .ui-btn.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+    }
+
+    /* Stage holding the 3D card */
+    .card-stage {
+      position: relative;
+      z-index: 10;
+      width: calc(var(--page-w) * 2);
+      height: var(--page-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      /* When closed, shift left by half a page width so the right half (front cover) is centered */
+      transform: translateX(calc(var(--page-w) * -0.5));
+      transition: transform 1.15s cubic-bezier(0.32, 0.08, 0.18, 1);
+    }
+
+    .card-stage.is-open {
+      transform: translateX(0);
+    }
+
+    .book-wrapper {
+      position: relative;
+      width: calc(var(--page-w) * 2);
+      height: var(--page-h);
+      transform-style: preserve-3d;
+    }
+
+    .book-shadow {
+      position: absolute;
+      inset: 4px;
+      border-radius: 6px;
+      pointer-events: none;
+      transition: opacity 1.15s cubic-bezier(0.32, 0.08, 0.18, 1);
+      box-shadow: var(--paper-shadow);
+      opacity: 0;
+    }
+
+    .card-stage.is-open .book-shadow {
+      opacity: 1;
+    }
+
+    /* Right Inside Page (4.png + bees) */
+    .right-page {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: var(--page-w);
+      height: var(--page-h);
+      border-radius: 2px 6px 6px 2px;
+      overflow: hidden;
+      background: #d8c1a3;
+      box-shadow: 0 18px 45px rgba(45, 28, 14, 0.28);
+      z-index: 2;
+      pointer-events: none; /* Enabled when card is open */
+    }
+
+    .card-stage.is-open .right-page {
+      pointer-events: auto;
+    }
+
+    .page-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* Left Hinged Assembly (Front cover on front face, Left inside page 2.jpg on back face) */
+    .left-flipper {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: var(--page-w);
+      height: var(--page-h);
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform 1.15s cubic-bezier(0.30, 0.06, 0.16, 1);
+      z-index: 5;
+    }
+
+    .card-stage.is-open .left-flipper {
+      transform: rotateY(-180deg);
+    }
+
+    .flipper-face {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      overflow: hidden;
+    }
+
+    /* Front Cover (1.png) */
+    .front-cover-face {
+      border-radius: 3px 7px 7px 3px;
+      box-shadow: var(--paper-shadow);
+      background: #d8c1a3;
+      cursor: pointer;
+      pointer-events: auto;
+      transform: rotateY(0deg) translateZ(1px);
+    }
+
+    /* CRITICAL FIX: Disable pointer-events on front cover when open so it never blocks left page */
+    .card-stage.is-open .front-cover-face {
+      pointer-events: none;
+    }
+
+    .front-cover-face::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 18px;
+      background: linear-gradient(to right,
+        rgba(55, 34, 16, 0.28) 0%,
+        rgba(255, 248, 238, 0.18) 38%,
+        rgba(65, 42, 22, 0.12) 65%,
+        transparent 100%);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .cover-hint-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 3px 7px 7px 3px;
+      box-shadow: inset 0 0 0 1px rgba(255, 248, 235, 0.45);
+      pointer-events: none;
+      animation: coverBreathe 3.2s ease-in-out infinite;
+      z-index: 4;
+    }
+
+    @keyframes coverBreathe {
+      0%, 100% {
+        box-shadow: inset 0 0 18px rgba(255, 245, 225, 0.12), 0 0 0 0 rgba(255, 242, 218, 0);
+      }
+      50% {
+        box-shadow: inset 0 0 32px rgba(255, 245, 225, 0.36), 0 0 24px 3px rgba(255, 240, 210, 0.28);
+      }
+    }
+
+    .outside-cover-prompt {
+      position: fixed;
+      bottom: max(18px, calc((100vh - var(--page-h)) * 0.22));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      pointer-events: none;
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+
+    .outside-cover-prompt.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+
+    .prompt-dot-ring {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(102, 71, 44, 0.42);
+      background: rgba(255, 248, 236, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(60, 38, 18, 0.15);
+      animation: gentlePulseRing 2.4s infinite ease-in-out;
+    }
+
+    .prompt-dot-core {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(145, 92, 64, 0.72);
+    }
+
+    @keyframes gentlePulseRing {
+      0%, 100% { transform: scale(0.94); opacity: 0.75; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* Left Inside Page (2.jpg Envelope & Wax Seal) */
+    .left-inside-face {
+      transform: rotateY(180deg) translateZ(1px);
+      border-radius: 6px 2px 2px 6px;
+      background: #d8c1a3;
+      cursor: pointer;
+      pointer-events: none;
+    }
+
+    /* CRITICAL FIX: Explicitly enable pointer-events on left inside page when card is open */
+    .card-stage.is-open .left-inside-face {
+      pointer-events: auto;
+    }
+
+    .left-inside-face::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 34px;
+      background: linear-gradient(to left,
+        rgba(38, 21, 9, 0.36) 0%,
+        rgba(56, 33, 15, 0.16) 35%,
+        rgba(80, 50, 25, 0.04) 72%,
+        transparent 100%);
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .right-page::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 34px;
+      background: linear-gradient(to right,
+        rgba(38, 21, 9, 0.34) 0%,
+        rgba(56, 33, 15, 0.14) 35%,
+        rgba(255, 248, 236, 0.08) 68%,
+        transparent 100%);
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .spine-crease-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom,
+        rgba(35, 18, 6, 0.42),
+        rgba(55, 30, 12, 0.25) 50%,
+        rgba(35, 18, 6, 0.42));
+      z-index: 12;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.8s ease 0.3s;
+    }
+
+    .card-stage.is-open .spine-crease-line {
+      opacity: 1;
+    }
+
+    /* Interactive Wax Seal Shimmer & Pulse on 2.jpg */
+    .wax-seal-hotspot {
+      position: absolute;
+      left: 63.5%;
+      top: 47.2%;
+      width: 16.5%;
+      height: 11.5%;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .wax-seal-hotspot::before {
+      content: "";
+      position: absolute;
+      inset: -14%;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255, 215, 226, 0.72) 0%,
+        rgba(244, 156, 178, 0.36) 48%,
+        rgba(255, 255, 255, 0) 75%);
+      animation: sealGlowPulse 2.4s ease-in-out infinite;
+    }
+
+    .wax-seal-hotspot::after {
+      content: "";
+      position: absolute;
+      inset: -4%;
+      border-radius: 50%;
+      background: linear-gradient(120deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.78) 50%,
+        transparent 80%);
+      background-size: 220% 220%;
+      mix-blend-mode: soft-light;
+      animation: sealShimmerSweep 3.2s ease-in-out infinite;
+    }
+
+    @keyframes sealGlowPulse {
+      0%, 100% { transform: scale(0.92); opacity: 0.55; }
+      50% { transform: scale(1.24); opacity: 1; }
+    }
+
+    @keyframes sealShimmerSweep {
+      0% { background-position: 180% 0%; opacity: 0.3; }
+      50% { background-position: -40% 100%; opacity: 0.95; }
+      100% { background-position: 180% 0%; opacity: 0.3; }
+    }
+
+    .left-inside-face:hover .wax-seal-hotspot::before {
+      transform: scale(1.35);
+      opacity: 1;
+    }
+
+    /* Right Page Interactive Bouquet & Bees Layer */
+    .bouquet-interaction-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      cursor: pointer;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .bees-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 7;
+    }
+
+    /* Full Unfolded Love Letter Overlay (3.jpg) */
+    .letter-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(34, 21, 12, 0.64);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      padding: 4.5vh 4vw;
+    }
+
+    .letter-backdrop.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .letter-sheet-wrapper {
+      position: relative;
+      height: min(88vh, 880px);
+      aspect-ratio: 682 / 1024;
+      max-width: 90vw;
+      max-height: 88vh;
+      border-radius: 5px;
+      box-shadow:
+        0 30px 75px rgba(20, 10, 4, 0.58),
+        0 8px 22px rgba(20, 10, 4, 0.32),
+        inset 0 0 0 1px rgba(255, 250, 242, 0.45);
+      background: #f5f2eb;
+      transform: translate3d(-24vw, 4vh, -120px) rotate(-6deg) scale(0.54);
+      opacity: 0;
+      transition:
+        transform 0.78s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.48s ease;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .letter-backdrop.is-sliding-out .letter-sheet-wrapper {
+      transform: translate3d(-16vw, -7vh, 0px) rotate(-3deg) scale(0.68);
+      opacity: 1;
+    }
+
+    .letter-backdrop.is-lifted .letter-sheet-wrapper {
+      transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+      opacity: 1;
+    }
+
+    .letter-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #f5f2eb;
+      pointer-events: none;
+    }
+
+    .letter-paper-sheen {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(to bottom,
+          transparent 0%,
+          transparent 32.8%,
+          rgba(120, 95, 75, 0.06) 33.3%,
+          rgba(255, 255, 255, 0.35) 33.7%,
+          transparent 34.5%,
+          transparent 66.2%,
+          rgba(120, 95, 75, 0.05) 66.7%,
+          rgba(255, 255, 255, 0.3) 67.1%,
+          transparent 68%);
+    }
+
+    .letter-close-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(110, 78, 55, 0.25);
+      background: rgba(252, 246, 238, 0.9);
+      color: #5c4028;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(45, 28, 14, 0.16);
+      transition: transform 0.22s ease, background 0.22s ease;
+      z-index: 5;
+    }
+
+    .letter-close-btn:hover {
+      background: #fff;
+      transform: scale(1.08);
+    }
+
+    /* Fallback uploader modal */
+    .asset-loader-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(42, 27, 16, 0.74);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .asset-loader-modal.hidden {
+      display: none;
+    }
+
+    .asset-card {
+      background: #fbf6ee;
+      border: 1px solid rgba(120, 86, 54, 0.3);
+      border-radius: 16px;
+      max-width: 480px;
+      width: 100%;
+      padding: 26px 28px;
+      box-shadow: 0 24px 60px rgba(25, 14, 6, 0.45);
+      text-align: center;
+    }
+
+    .asset-card h2 {
+      font-size: 1.22rem;
+      margin-bottom: 10px;
+      color: #4a3321;
+    }
+
+    .asset-card p {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #6e523b;
+      margin-bottom: 18px;
+    }
+
+    .file-drop-zone {
+      display: block;
+      border: 2px dashed rgba(140, 100, 66, 0.45);
+      border-radius: 12px;
+      padding: 20px;
+      background: rgba(238, 226, 208, 0.45);
+      cursor: pointer;
+      transition: background 0.2s ease;
+      margin-bottom: 10px;
+    }
+
+    .file-drop-zone:hover {
+      background: rgba(238, 226, 208, 0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="desk-backdrop" id="deskBackdrop">
+    <canvas class="ambient-canvas" id="ambientCanvas"></canvas>
+
+    <!-- Top Navigation & Audio Controls -->
+    <div class="top-controls">
+      <div class="left-controls">
+        <button class="ui-btn hidden" id="backToCoverBtn" type="button" title="Cerrar tarjeta y volver a la portada">
+          <span>&#8592;</span>
+          <span>Cerrar / Volver a la portada</span>
+        </button>
+      </div>
+
+      <div class="right-controls">
+        <button class="ui-btn hidden" id="exportStandaloneBtn" type="button" title="Descargar archivo HTML único optimizado (~1.5 MB) listo para GitHub Pages">
+          <span>&#10515;</span>
+          <span>Guardar HTML único (Ligero ~1.5MB)</span>
+        </button>
+        <button class="ui-btn" id="audioToggleBtn" type="button" aria-label="Alternar sonido" title="Activar / Silenciar efectos suaves">
+          <span id="audioIcon">&#128266;</span>
+          <span id="audioLabel">Sonido</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main 3D Card Spread -->
+    <div class="card-stage" id="cardStage">
+      <div class="book-wrapper">
+        <div class="book-shadow"></div>
+        <div class="spine-crease-line"></div>
+
+        <!-- RIGHT INSIDE PAGE: Bouquet (inpainted 4.png) + 3 Animated Cut-out Bees -->
+        <div class="right-page" id="rightPage">
+          <img id="imgRightBouquet" class="page-img" alt="" />
+          <div class="bouquet-interaction-layer" id="bouquetLayer">
+            <canvas class="bees-canvas" id="beesCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- LEFT HINGED FLIPPER: Front = Cover (1.png), Back = Envelope Page (2.jpg) -->
+        <div class="left-flipper" id="leftFlipper">
+          <div class="flipper-face front-cover-face" id="frontCoverFace">
+            <img id="imgFrontCover" class="page-img" alt="" />
+            <div class="cover-hint-glow"></div>
+          </div>
+
+          <div class="flipper-face left-inside-face" id="leftInsideFace">
+            <img id="imgLeftEnvelope" class="page-img" alt="" />
+            <div class="wax-seal-hotspot"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subtle non-intrusive pulse dot below the closed card -->
+    <div class="outside-cover-prompt" id="coverPrompt">
+      <div class="prompt-dot-ring">
+        <div class="prompt-dot-core"></div>
+      </div>
+    </div>
+
+    <!-- Unfolding Love Letter Modal Overlay (3.jpg) -->
+    <div class="letter-backdrop" id="letterBackdrop">
+      <div class="letter-sheet-wrapper" id="letterSheet">
+        <button class="letter-close-btn" id="letterCloseBtn" type="button" aria-label="Guardar carta">&times;</button>
+        <img id="imgLetterFull" class="letter-img" alt="" />
+        <div class="letter-paper-sheen"></div>
+      </div>
+    </div>
+
+    <!-- Automatic Local Image Loader Fallback -->
+    <div class="asset-loader-modal hidden" id="assetLoaderModal">
+      <div class="asset-card">
+        <h2>Cargar las 4 imágenes de la tarjeta</h2>
+        <p>
+          Selecciona juntas las 4 imágenes (<strong>1.png, 2.jpg, 3.jpg, 4.png</strong>). El sistema comprimirá inteligentemente las imágenes, recortará las 3 abejas y te dará un archivo HTML único de solo <strong>~1.5 MB</strong> apto para GitHub Pages.
+        </p>
+        <label class="file-drop-zone" for="assetFileInput">
+          <strong>Haz clic aquí para seleccionar 1.png, 2.jpg, 3.jpg y 4.png</strong>
+          <input type="file" id="assetFileInput" multiple accept="image/*" style="display:none" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /********************************************************************
+     * 1. ASSETS STORE (Replaced cleanly during standalone HTML export)
+     ********************************************************************/
+    /*__ASSETS_START__*/
+    const EMBEDDED_ASSETS = {
+      isPacked: false,
+      cover: "1.png",
+      envelope: "2.jpg",
+      letter: "3.jpg",
+      bouquetRaw: "4.png",
+      bouquetClean: null,
+      beeSprites: null
+    };
+    /*__ASSETS_END__*/
+
+    /********************************************************************
+     * 2. SYNTHESIZED WEB AUDIO API SOUND ENGINE
+     ********************************************************************/
+    class RomanticAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+      }
+
+      playPaperRustle(duration = 0.42, pitchShift = 1.0) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const sampleRate = this.ctx.sampleRate;
+        const frameCount = Math.floor(sampleRate * duration);
+        const buffer = this.ctx.createBuffer(1, frameCount, sampleRate);
+        const data = buffer.getChannelData(0);
+
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < frameCount; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.997 * b0 + white * 0.029;
+          b1 = 0.985 * b1 + white * 0.032;
+          b2 = 0.950 * b2 + white * 0.048;
+          const env = Math.sin((i / frameCount) * Math.PI);
+          data[i] = (b0 + b1 + b2) * env * 0.32;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(620 * pitchShift, now);
+        filter.frequency.exponentialRampToValueAtTime(980 * pitchShift, now + duration);
+        filter.Q.value = 1.8;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.09, now + duration * 0.28);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(now);
+        noise.stop(now + duration);
+      }
+
+      playBeeChime() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 880.0, 1046.5, 1174.66];
+        const freq = notes[Math.floor(Math.random() * notes.length)];
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.008, now + 0.65);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.035, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.88);
+      }
+    }
+
+    const sound = new RomanticAudioEngine();
+
+    /********************************************************************
+     * 3. SMART IMAGE OPTIMIZER & BEE EXTRACTOR
+     *    Compresses large PNGs into crisp, lightweight JPEGs (~250KB each)
+     *    so the final single HTML file is ~1.5 MB instead of 48 MB!
+     ********************************************************************/
+    const BEE_REGIONS_1200x1800 = [
+      { id: "top",   x1: 590, y1: 395, x2: 745,  y2: 535,  homeX: 0.556, homeY: 0.258 },
+      { id: "left",  x1: 105, y1: 565, x2: 260,  y2: 705,  homeX: 0.152, homeY: 0.353 },
+      { id: "right", x1: 970, y1: 955, x2: 1125, y2: 1095, homeX: 0.873, homeY: 0.570 }
+    ];
+
+    function compressImageToDataURL(imgEl, maxHeight = 1350, quality = 0.84) {
+      const origW = imgEl.naturalWidth || 800;
+      const origH = imgEl.naturalHeight || 1200;
+      const scale = Math.min(1, maxHeight / origH);
+      const w = Math.round(origW * scale);
+      const h = Math.round(origH * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(imgEl, 0, 0, w, h);
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+
+    function processBouquetAndExtractBees(img4Element) {
+      if (EMBEDDED_ASSETS.bouquetClean && EMBEDDED_ASSETS.beeSprites) {
+        return Promise.resolve({
+          cleanBouquetUrl: EMBEDDED_ASSETS.bouquetClean,
+          beeSprites: EMBEDDED_ASSETS.beeSprites
+        });
+      }
+
+      return new Promise((resolve) => {
+        // Work at an optimized 900x1350 resolution for crisp quality & small file size
+        const targetH = 1350;
+        const targetW = 900;
+        const scaleX = targetW / 1200;
+        const scaleY = targetH / 1800;
+
+        const mainCanvas = document.createElement("canvas");
+        mainCanvas.width = targetW;
+        mainCanvas.height = targetH;
+        const ctx = mainCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(img4Element, 0, 0, targetW, targetH);
+
+        const extractedSprites = [];
+
+        BEE_REGIONS_1200x1800.forEach((region) => {
+          const rx1 = Math.round(region.x1 * scaleX);
+          const ry1 = Math.round(region.y1 * scaleY);
+          const rw = Math.round((region.x2 - region.x1) * scaleX);
+          const rh = Math.round((region.y2 - region.y1) * scaleY);
+
+          const patchData = ctx.getImageData(rx1, ry1, rw, rh);
+          const p = patchData.data;
+
+          let sumR = 0, sumG = 0, sumB = 0, count = 0;
+          for (let y = 0; y < rh; y++) {
+            for (let x = 0; x < rw; x++) {
+              if (x < 6 || x >= rw - 6 || y < 6 || y >= rh - 6) {
+                const idx = (y * rw + x) * 4;
+                sumR += p[idx];
+                sumG += p[idx + 1];
+                sumB += p[idx + 2];
+                count++;
+              }
+            }
+          }
+          const bgR = sumR / count;
+          const bgG = sumG / count;
+          const bgB = sumB / count;
+          const bgRB = bgR - bgB;
+
+          const spriteCanvas = document.createElement("canvas");
+          spriteCanvas.width = rw;
+          spriteCanvas.height = rh;
+          const sCtx = spriteCanvas.getContext("2d");
+          const spriteImgData = sCtx.createImageData(rw, rh);
+          const sp = spriteImgData.data;
+
+          const alphaMask = new Float32Array(rw * rh);
+
+          for (let y = 0; y < rh; y++) {
+            for (let x = 0; x < rw; x++) {
+              const i = y * rw + x;
+              const idx = i * 4;
+              const r = p[idx], g = p[idx + 1], b = p[idx + 2];
+
+              const dR = r - bgR;
+              const dG = g - bgG;
+              const dB = b - bgB;
+              const colorDist = Math.sqrt(dR * dR + dG * dG + dB * dB);
+              const rbDiff = Math.abs((r - b) - bgRB);
+
+              const edgeDist = Math.min(x, y, rw - 1 - x, rh - 1 - y);
+              const edgeWeight = Math.min(1, edgeDist / 6);
+
+              const score = Math.max(colorDist, rbDiff * 1.18) * edgeWeight;
+              if (score > 24) {
+                alphaMask[i] = Math.min(1, (score - 24) / 20);
+              }
+            }
+          }
+
+          const smoothedMask = new Float32Array(rw * rh);
+          for (let y = 1; y < rh - 1; y++) {
+            for (let x = 1; x < rw - 1; x++) {
+              let maxNeighbor = 0;
+              let avgNeighbor = 0;
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  const val = alphaMask[(y + dy) * rw + (x + dx)];
+                  if (val > maxNeighbor) maxNeighbor = val;
+                  avgNeighbor += val;
+                }
+              }
+              avgNeighbor /= 9;
+              smoothedMask[y * rw + x] = Math.min(1, alphaMask[y * rw + x] * 0.65 + avgNeighbor * 0.35 + (maxNeighbor > 0.6 ? 0.12 : 0));
+            }
+          }
+
+          const donorOffsetX = region.id === "top" ? -Math.round(155 * scaleX) : 0;
+          const donorOffsetY = region.id === "top" ? -Math.round(80 * scaleY) : -Math.round(145 * scaleY);
+          const donorData = ctx.getImageData(
+            Math.max(0, Math.min(targetW - rw, rx1 + donorOffsetX)),
+            Math.max(0, Math.min(targetH - rh, ry1 + donorOffsetY)),
+            rw,
+            rh
+          ).data;
+
+          for (let y = 0; y < rh; y++) {
+            for (let x = 0; x < rw; x++) {
+              const i = y * rw + x;
+              const idx = i * 4;
+              const a = smoothedMask[i];
+
+              sp[idx] = p[idx];
+              sp[idx + 1] = p[idx + 1];
+              sp[idx + 2] = p[idx + 2];
+              sp[idx + 3] = Math.round(a * 255);
+
+              const edgeFade = Math.min(1, Math.min(x, y, rw - 1 - x, rh - 1 - y) / 10);
+              const healBlend = Math.min(1, Math.max(a * 1.35, edgeFade > 0.45 && a > 0.02 ? 0.85 : 0));
+              if (healBlend > 0) {
+                p[idx]     = Math.round(p[idx] * (1 - healBlend) + donorData[idx] * healBlend);
+                p[idx + 1] = Math.round(p[idx + 1] * (1 - healBlend) + donorData[idx + 1] * healBlend);
+                p[idx + 2] = Math.round(p[idx + 2] * (1 - healBlend) + donorData[idx + 2] * healBlend);
+              }
+            }
+          }
+
+          sCtx.putImageData(spriteImgData, 0, 0);
+          ctx.putImageData(patchData, rx1, ry1);
+
+          extractedSprites.push(spriteCanvas.toDataURL("image/png"));
+        });
+
+        // Compress healed right page as high-quality JPEG (~230KB instead of 15MB PNG)
+        const cleanBouquetUrl = mainCanvas.toDataURL("image/jpeg", 0.84);
+        EMBEDDED_ASSETS.bouquetClean = cleanBouquetUrl;
+        EMBEDDED_ASSETS.beeSprites = extractedSprites;
+        EMBEDDED_ASSETS.bouquetRaw = null; // Free memory so raw 4.png is never exported
+
+        resolve({ cleanBouquetUrl, beeSprites: extractedSprites });
+      });
+    }
+
+    /********************************************************************
+     * 4. ANIMATED WATERCOLOR BEES, GOLDEN POLLEN SPARKLES & PETALS
+     ********************************************************************/
+    class BouquetBeeAnimator {
+      constructor(canvas, beeSpriteUrls) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
+        this.sprites = [];
+        this.bees = [];
+        this.particles = [];
+        this.lastChimeTime = 0;
+        this.destroyed = false;
+
+        beeSpriteUrls.forEach((url, idx) => {
+          const img = new Image();
+          img.src = url;
+          this.sprites.push(img);
+
+          const cfg = BEE_REGIONS_1200x1800[idx];
+          this.bees.push({
+            idx,
+            homeX: cfg.homeX,
+            homeY: cfg.homeY,
+            x: cfg.homeX,
+            y: cfg.homeY,
+            phase: idx * 2.1 + Math.random(),
+            speed: 0.85 + idx * 0.14,
+            rx: 0.058 + idx * 0.008,
+            ry: 0.040 + idx * 0.006,
+            excitedTimer: 0,
+            targetPoint: null,
+            angle: 0,
+            wingPhase: Math.random() * 10
+          });
+        });
+
+        this.blossoms = [
+          { x: 0.30, y: 0.40 },
+          { x: 0.48, y: 0.41 },
+          { x: 0.65, y: 0.45 },
+          { x: 0.74, y: 0.50 },
+          { x: 0.42, y: 0.57 },
+          { x: 0.57, y: 0.55 }
+        ];
+
+        this.resize();
+        this._onResize = () => this.resize();
+        window.addEventListener("resize", this._onResize);
+        this.animate = this.animate.bind(this);
+        requestAnimationFrame(this.animate);
+      }
+
+      destroy() {
+        this.destroyed = true;
+        window.removeEventListener("resize", this._onResize);
+      }
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.width = Math.max(200, rect.width);
+        this.height = Math.max(300, rect.height);
+        this.canvas.width = Math.floor(this.width * dpr);
+        this.canvas.height = Math.floor(this.height * dpr);
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      triggerExcitement(normX, normY, burstCount = 16) {
+        const clampedX = Math.max(0.15, Math.min(0.85, normX));
+        const clampedY = Math.max(0.25, Math.min(0.72, normY));
+
+        const now = performance.now();
+        if (now - this.lastChimeTime > 280) {
+          sound.playBeeChime();
+          this.lastChimeTime = now;
+        }
+
+        // Make bees fly excitedly toward the cursor/tap or nearby blossoms
+        this.bees.forEach((bee, idx) => {
+          bee.excitedTimer = 2.4 + Math.random() * 1.2;
+          if (idx === 0 || Math.random() < 0.55) {
+            bee.targetPoint = {
+              x: clampedX + (Math.random() - 0.5) * 0.08,
+              y: clampedY + (Math.random() - 0.5) * 0.08
+            };
+          } else {
+            bee.targetPoint = this.blossoms[Math.floor(Math.random() * this.blossoms.length)];
+          }
+        });
+
+        for (let i = 0; i < burstCount; i++) {
+          const isPetal = i % 3 === 0;
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.0008 + Math.random() * 0.0028;
+          this.particles.push({
+            x: clampedX + (Math.random() - 0.5) * 0.03,
+            y: clampedY + (Math.random() - 0.5) * 0.03,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.0007,
+            size: isPetal ? (4.2 + Math.random() * 4.2) : (1.8 + Math.random() * 2.4),
+            alpha: 1,
+            decay: 0.013 + Math.random() * 0.012,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.08,
+            isPetal,
+            color: isPetal
+              ? ["#f7b2bd", "#f9d689", "#b8d4ee", "#f29c85"][Math.floor(Math.random() * 4)]
+              : (Math.random() < 0.7 ? "#ffdf78" : "#fff6d6")
+          });
+        }
+      }
+
+      animate() {
+        if (this.destroyed) return;
+        const dt = 0.016;
+        const W = this.width || 300;
+        const H = this.height || 450;
+
+        this.ctx.clearRect(0, 0, W, H);
+
+        this.bees.forEach((bee, idx) => {
+          bee.phase += dt * bee.speed;
+          bee.wingPhase += dt * (bee.excitedTimer > 0 ? 40 : 20);
+
+          let desiredX, desiredY;
+          if (bee.excitedTimer > 0 && bee.targetPoint) {
+            bee.excitedTimer -= dt;
+            const orbitR = 0.048;
+            desiredX = bee.targetPoint.x + Math.sin(bee.phase * 3.6) * orbitR;
+            desiredY = bee.targetPoint.y + Math.sin(bee.phase * 7.2) * (orbitR * 0.65);
+
+            if (Math.random() < 0.35) {
+              this.particles.push({
+                x: bee.x,
+                y: bee.y + 0.01,
+                vx: (Math.random() - 0.5) * 0.0008,
+                vy: 0.0005 + Math.random() * 0.0008,
+                size: 1.6 + Math.random() * 2.0,
+                alpha: 0.9,
+                decay: 0.022,
+                rotation: 0,
+                rotSpeed: 0,
+                isPetal: false,
+                color: "#ffe17d"
+              });
+            }
+          } else {
+            desiredX = bee.homeX + Math.sin(bee.phase * 1.3) * bee.rx;
+            desiredY = bee.homeY + Math.sin(bee.phase * 2.6) * bee.ry;
+
+            if (Math.random() < 0.045) {
+              this.particles.push({
+                x: bee.x,
+                y: bee.y + 0.01,
+                vx: (Math.random() - 0.5) * 0.0004,
+                vy: 0.0004 + Math.random() * 0.0005,
+                size: 1.5 + Math.random() * 1.5,
+                alpha: 0.75,
+                decay: 0.016,
+                rotation: 0,
+                rotSpeed: 0,
+                isPetal: false,
+                color: "#ffe58f"
+              });
+            }
+          }
+
+          // Keep bees safely inside bouquet bounds so handwritten text is never covered
+          desiredX = Math.max(0.11, Math.min(0.89, desiredX));
+          desiredY = Math.max(0.235, Math.min(0.73, desiredY));
+
+          const ease = bee.excitedTimer > 0 ? 0.09 : 0.045;
+          const prevX = bee.x;
+          const prevY = bee.y;
+          bee.x += (desiredX - bee.x) * ease;
+          bee.y += (desiredY - bee.y) * ease;
+
+          const dx = bee.x - prevX;
+          const dy = bee.y - prevY;
+
+          const targetTilt = Math.max(-0.3, Math.min(0.3, dy * 180 + dx * 95));
+          bee.angle += (targetTilt - bee.angle) * 0.14;
+
+          const sprite = this.sprites[idx];
+          if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+            const drawW = W * (155 / 1200);
+            const drawH = H * (140 / 1800);
+            const cx = bee.x * W;
+            const cy = bee.y * H;
+
+            const flutterScaleY = 1 + Math.sin(bee.wingPhase) * 0.045;
+            const flutterScaleX = 1 - Math.sin(bee.wingPhase) * 0.025;
+
+            this.ctx.save();
+            this.ctx.translate(cx, cy);
+            this.ctx.rotate(bee.angle);
+            this.ctx.scale(flutterScaleX, flutterScaleY);
+            this.ctx.drawImage(sprite, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+            this.ctx.restore();
+          }
+        });
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const pt = this.particles[i];
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.vy += 0.000018;
+          pt.rotation += pt.rotSpeed;
+          pt.alpha -= pt.decay;
+
+          if (pt.alpha <= 0) {
+            this.particles.splice(i, 1);
+            continue;
+          }
+
+          const px = pt.x * W;
+          const py = pt.y * H;
+
+          this.ctx.save();
+          this.ctx.globalAlpha = Math.max(0, pt.alpha);
+          this.ctx.translate(px, py);
+
+          if (pt.isPetal) {
+            this.ctx.rotate(pt.rotation);
+            this.ctx.fillStyle = pt.color;
+            this.ctx.beginPath();
+            this.ctx.ellipse(0, 0, pt.size, pt.size * 0.58, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+          } else {
+            const grad = this.ctx.createRadialGradient(0, 0, 0, 0, 0, pt.size * 2.2);
+            grad.addColorStop(0, "#ffffff");
+            grad.addColorStop(0.4, pt.color);
+            grad.addColorStop(1, "rgba(255, 215, 90, 0)");
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, pt.size * 2.2, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+
+          this.ctx.restore();
+        }
+
+        requestAnimationFrame(this.animate);
+      }
+    }
+
+    /********************************************************************
+     * 5. AMBIENT DESK DUST MOTES
+     ********************************************************************/
+    function initAmbientDeskCanvas() {
+      const canvas = document.getElementById("ambientCanvas");
+      const ctx = canvas.getContext("2d");
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener("resize", () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const motes = Array.from({ length: 26 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: 1 + Math.random() * 2.2,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: -0.12 - Math.random() * 0.25,
+        phase: Math.random() * Math.PI * 2
+      }));
+
+      function renderAmbient(t) {
+        ctx.clearRect(0, 0, w, h);
+        motes.forEach((m) => {
+          m.x += m.vx + Math.sin(t * 0.0006 + m.phase) * 0.15;
+          m.y += m.vy;
+          if (m.y < -10) m.y = h + 10;
+          if (m.x < -10) m.x = w + 10;
+          if (m.x > w + 10) m.x = -10;
+
+          const alpha = 0.18 + 0.18 * Math.sin(t * 0.0015 + m.phase);
+          ctx.fillStyle = `rgba(255, 244, 218, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        requestAnimationFrame(renderAmbient);
+      }
+      requestAnimationFrame(renderAmbient);
+    }
+
+    /********************************************************************
+     * 6. MAIN CONTROLLER & CLEAN STANDALONE TEMPLATE EXPORTER
+     ********************************************************************/
+    // Capture clean template BEFORE any DOM mutations or image data URLs are attached to <img> tags
+    const CLEAN_INITIAL_HTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initAmbientDeskCanvas();
+
+      const cardStage = document.getElementById("cardStage");
+      const frontCoverFace = document.getElementById("frontCoverFace");
+      const leftInsideFace = document.getElementById("leftInsideFace");
+      const rightPage = document.getElementById("rightPage");
+      const backToCoverBtn = document.getElementById("backToCoverBtn");
+      const coverPrompt = document.getElementById("coverPrompt");
+      const letterBackdrop = document.getElementById("letterBackdrop");
+      const letterSheet = document.getElementById("letterSheet");
+      const letterCloseBtn = document.getElementById("letterCloseBtn");
+      const audioToggleBtn = document.getElementById("audioToggleBtn");
+      const audioIcon = document.getElementById("audioIcon");
+      const exportStandaloneBtn = document.getElementById("exportStandaloneBtn");
+
+      const imgFrontCover = document.getElementById("imgFrontCover");
+      const imgLeftEnvelope = document.getElementById("imgLeftEnvelope");
+      const imgLetterFull = document.getElementById("imgLetterFull");
+      const imgRightBouquet = document.getElementById("imgRightBouquet");
+
+      let isCardOpen = false;
+      let isLetterOpen = false;
+      let letterTimeout = null;
+      let beeAnimator = null;
+
+      function startBeeAnimator(sprites) {
+        if (beeAnimator) beeAnimator.destroy();
+        beeAnimator = new BouquetBeeAnimator(
+          document.getElementById("beesCanvas"),
+          sprites
+        );
+      }
+
+      // Initialize images
+      imgFrontCover.src = EMBEDDED_ASSETS.cover;
+      imgLeftEnvelope.src = EMBEDDED_ASSETS.envelope;
+      imgLetterFull.src = EMBEDDED_ASSETS.letter;
+
+      if (EMBEDDED_ASSETS.isPacked && EMBEDDED_ASSETS.bouquetClean && EMBEDDED_ASSETS.beeSprites) {
+        imgRightBouquet.src = EMBEDDED_ASSETS.bouquetClean;
+        startBeeAnimator(EMBEDDED_ASSETS.beeSprites);
+      } else {
+        const rawBouquetImg = new Image();
+        rawBouquetImg.crossOrigin = "anonymous";
+        rawBouquetImg.onload = async () => {
+          try {
+            const processed = await processBouquetAndExtractBees(rawBouquetImg);
+            imgRightBouquet.src = processed.cleanBouquetUrl;
+            startBeeAnimator(processed.beeSprites);
+            exportStandaloneBtn.classList.remove("hidden");
+          } catch (err) {
+            document.getElementById("assetLoaderModal").classList.remove("hidden");
+          }
+        };
+        rawBouquetImg.onerror = () => {
+          document.getElementById("assetLoaderModal").classList.remove("hidden");
+        };
+        rawBouquetImg.src = EMBEDDED_ASSETS.bouquetClean || EMBEDDED_ASSETS.bouquetRaw;
+      }
+
+      // 1. Open Card from Front Cover
+      frontCoverFace.addEventListener("click", (e) => {
+        if (isCardOpen) return;
+        e.stopPropagation();
+        isCardOpen = true;
+        sound.playPaperRustle(0.48, 0.95);
+        cardStage.classList.add("is-open");
+        backToCoverBtn.classList.remove("hidden");
+        coverPrompt.classList.add("hidden");
+        setTimeout(() => {
+          if (beeAnimator) beeAnimator.resize();
+        }, 550);
+      });
+
+      // 2. Close Card / Back to Cover
+      backToCoverBtn.addEventListener("click", () => {
+        if (!isCardOpen) return;
+        if (isLetterOpen) closeLetter();
+        isCardOpen = false;
+        sound.playPaperRustle(0.44, 1.05);
+        cardStage.classList.remove("is-open");
+        backToCoverBtn.classList.add("hidden");
+        coverPrompt.classList.remove("hidden");
+      });
+
+      // 3. Open Love Letter from Left Page (2.jpg Envelope / Wax Seal)
+      leftInsideFace.addEventListener("click", (e) => {
+        if (!isCardOpen || isLetterOpen) return;
+        e.stopPropagation();
+        isLetterOpen = true;
+        sound.playPaperRustle(0.52, 1.12);
+
+        letterBackdrop.classList.add("is-visible", "is-sliding-out");
+        clearTimeout(letterTimeout);
+        letterTimeout = setTimeout(() => {
+          letterBackdrop.classList.remove("is-sliding-out");
+          letterBackdrop.classList.add("is-lifted");
+        }, 260);
+      });
+
+      // 4. Tuck Letter back into Envelope
+      function closeLetter() {
+        if (!isLetterOpen) return;
+        isLetterOpen = false;
+        sound.playPaperRustle(0.42, 0.92);
+        clearTimeout(letterTimeout);
+        letterBackdrop.classList.remove("is-lifted");
+        letterBackdrop.classList.add("is-sliding-out");
+        letterTimeout = setTimeout(() => {
+          letterBackdrop.classList.remove("is-visible", "is-sliding-out");
+        }, 360);
+      }
+
+      letterSheet.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeLetter();
+      });
+
+      letterCloseBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closeLetter();
+      });
+
+      letterBackdrop.addEventListener("click", () => {
+        closeLetter();
+      });
+
+      // 5. Right Page Bouquet & Bees Interactive Magic (Mouse, Pointer & Touch)
+      function triggerBeesAtClientPos(clientX, clientY, isClick = false) {
+        if (!beeAnimator || !isCardOpen) return;
+        const rect = rightPage.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const normX = (clientX - rect.left) / rect.width;
+        const normY = (clientY - rect.top) / rect.height;
+        if (normX >= 0 && normX <= 1 && normY >= 0 && normY <= 1) {
+          beeAnimator.triggerExcitement(normX, normY, isClick ? 22 : 5);
+        }
+      }
+
+      rightPage.addEventListener("click", (e) => {
+        triggerBeesAtClientPos(e.clientX, e.clientY, true);
+      });
+
+      let lastMoveTime = 0;
+      rightPage.addEventListener("mousemove", (e) => {
+        const now = performance.now();
+        if (now - lastMoveTime > 80) {
+          lastMoveTime = now;
+          triggerBeesAtClientPos(e.clientX, e.clientY, false);
+        }
+      });
+
+      rightPage.addEventListener("touchstart", (e) => {
+        if (e.touches && e.touches[0]) {
+          triggerBeesAtClientPos(e.touches[0].clientX, e.touches[0].clientY, true);
+        }
+      }, { passive: true });
+
+      rightPage.addEventListener("touchmove", (e) => {
+        const now = performance.now();
+        if (now - lastMoveTime > 80 && e.touches && e.touches[0]) {
+          lastMoveTime = now;
+          triggerBeesAtClientPos(e.touches[0].clientX, e.touches[0].clientY, false);
+        }
+      }, { passive: true });
+
+      // 6. Mute / Unmute Audio Button
+      audioToggleBtn.addEventListener("click", () => {
+        const muted = sound.toggleMute();
+        audioIcon.innerHTML = muted ? "&#128263;" : "&#128266;";
+      });
+
+      // 7. File Picker Handler (Compresses 1.png..4.png automatically so size is ~1.5 MB)
+      document.getElementById("assetFileInput").addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        const loadFileAsImage = (file) => new Promise((res) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => res(img);
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
+
+        let rawImg4 = null;
+
+        for (const f of files) {
+          const img = await loadFileAsImage(f);
+          if (f.name.startsWith("1")) {
+            EMBEDDED_ASSETS.cover = compressImageToDataURL(img, 1350, 0.84);
+          } else if (f.name.startsWith("2")) {
+            EMBEDDED_ASSETS.envelope = compressImageToDataURL(img, 1200, 0.85);
+          } else if (f.name.startsWith("3")) {
+            EMBEDDED_ASSETS.letter = compressImageToDataURL(img, 1400, 0.88);
+          } else if (f.name.startsWith("4")) {
+            rawImg4 = img;
+          }
+        }
+
+        imgFrontCover.src = EMBEDDED_ASSETS.cover;
+        imgLeftEnvelope.src = EMBEDDED_ASSETS.envelope;
+        imgLetterFull.src = EMBEDDED_ASSETS.letter;
+
+        if (rawImg4) {
+          EMBEDDED_ASSETS.bouquetClean = null;
+          EMBEDDED_ASSETS.beeSprites = null;
+          const processed = await processBouquetAndExtractBees(rawImg4);
+          imgRightBouquet.src = processed.cleanBouquetUrl;
+          startBeeAnimator(processed.beeSprites);
+        }
+
+        document.getElementById("assetLoaderModal").classList.add("hidden");
+        exportStandaloneBtn.classList.remove("hidden");
+      });
+
+      // 8. Clean, Lightweight Standalone HTML Exporter (~1.5 MB, 100% interactive)
+      exportStandaloneBtn.addEventListener("click", async () => {
+        const ensureCompressed = (imgEl, maxH, q) => {
+          if (imgEl.src.startsWith("data:image/jpeg")) return imgEl.src;
+          return compressImageToDataURL(imgEl, maxH, q);
+        };
+
+        const packedData = {
+          isPacked: true,
+          cover: ensureCompressed(imgFrontCover, 1350, 0.84),
+          envelope: ensureCompressed(imgLeftEnvelope, 1200, 0.85),
+          letter: ensureCompressed(imgLetterFull, 1400, 0.88),
+          bouquetRaw: null,
+          bouquetClean: EMBEDDED_ASSETS.bouquetClean,
+          beeSprites: EMBEDDED_ASSETS.beeSprites
+        };
+
+        // Inject packedData into CLEAN_INITIAL_HTML so DOM state is pristine and images are never duplicated
+        const replacementBlock = `/*__ASSETS_START__*/\n    const EMBEDDED_ASSETS = ${JSON.stringify(packedData)};\n    /*__ASSETS_END__*/`;
+        const standaloneHtml = CLEAN_INITIAL_HTML.replace(
+          /\/\*__ASSETS_START__\*\/[\s\S]*?\/\*__ASSETS_END__\*\//,
+          () => replacementBlock
+        );
+
+        const blob = new Blob([standaloneHtml], { type: "text/html;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "index.html";
+        a.click();
+      });
+    });
+  </script>
+</body>
+</html>
